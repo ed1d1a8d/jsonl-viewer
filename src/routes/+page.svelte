@@ -1,6 +1,14 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import { writable } from "svelte/store";
+
+    const setURLParam = (key: string, value: string) => {
+        let oldURL = new URLSearchParams($page.url.searchParams.toString());
+        oldURL.set(key, value);
+        goto(`?${oldURL.toString()}`);
+    };
+
     interface DataFrame {
         columns: string[];
         rendered: boolean[];
@@ -12,10 +20,10 @@
         const df_rendered_str = df.rendered
             .map((r) => (r ? "1" : "0"))
             .join("");
-        goto("?df_rendered=" + df_rendered_str);
+        setURLParam("df_rendered", df_rendered_str);
     });
 
-    let selectedRow = writable<number | null>(null);
+    let selectedRow: number | null = 0;
     const selectedRowValid = () => {
         if ($df == null) return false;
         if (selectedRow == null) return false;
@@ -26,13 +34,6 @@
 
         return true;
     };
-    selectedRow.subscribe((selectedRow) => {
-        if (selectedRowValid()) {
-            goto("?selected_row=" + selectedRow);
-        } else {
-            goto("?selected_row=");
-        }
-    });
 
     let files: FileList | null = null;
     $: if (files) {
@@ -42,6 +43,7 @@
             console.error("error reading file");
             console.error(evt);
         };
+        setURLParam("file", files[0].webkitRelativePath);
 
         reader.onload = (evt) => {
             if (!evt.target) {
@@ -130,6 +132,8 @@
         {/each}
         <br />
     {/if}
+
+    <!-- Make a button toggle per column in the dataframe -->
 
     <!-- Input field for what row of df to visualize -->
     <label for="row_selector"
